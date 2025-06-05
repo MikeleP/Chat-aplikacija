@@ -4,7 +4,7 @@
       <div
         v-for="(msg, index) in messages"
         :key="index"
-        :class="msg.type === 'system' ? 'system-msg' : 'user-msg'"
+        :class="msg.type === 'system' ? 'system-msg' : 'chat-bubble'"
       >
         {{ msg.text }}
       </div>
@@ -141,5 +141,15 @@ function sendMessage() {
 .user-msg {
   text-align: left;
   margin: 2px 0;
+}
+
+.chat-bubble {
+  background-color: white;
+  border-radius: 999px;
+  padding: 12px 20px;
+  margin: 6px 0;
+  font-size: 1.1rem;
+  max-width: fit-content;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 </style>

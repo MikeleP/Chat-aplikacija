@@ -43,6 +43,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 "message": "__left__"
             })
             for c in connected_clients:
-                await c["socket"].send_text(leave_msg)
+                try:
+                    await c["socket"].send_text(leave_msg)
+                except:
+                    pass
+
 
 
