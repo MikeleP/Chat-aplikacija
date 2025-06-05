@@ -25,7 +25,6 @@ const newMessage = ref("");
 let username = "";
 const socket = ref(null);
 
-// Pita korisnika za ime
 onMounted(() => {
   while (!username) {
     username = prompt("Upiši svoje ime:");
@@ -44,15 +43,14 @@ onMounted(() => {
 
   socket.value.onmessage = (event) => {
     const data = JSON.parse(event.data);
-    socket.value.onmessage = (event) => {
-      const data = JSON.parse(event.data);
 
-      if (data.message === "__joined__") {
-        messages.value.push(`${data.username} se pridružio Chat-u`);
-      } else {
-        messages.value.push(`${data.username}: ${data.message}`);
-      }
-    };
+    if (data.message === "__joined__") {
+      messages.value.push(`${data.username} se pridružio Chat-u`);
+    } else if (data.message === "__left__") {
+      messages.value.push(`${data.username} je napustio Chat.`);
+    } else {
+      messages.value.push(`${data.username}: ${data.message}`);
+    }
   };
 
   socket.value.onclose = () => {

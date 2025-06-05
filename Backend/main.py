@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import WebSocket, WebSocketDisconnect
+
+import json
 
 
 app = FastAPI()
@@ -18,16 +20,29 @@ connected_clients = []
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    connected_clients.append(websocket)
+    client = {"socket": websocket, "username": None}
+    connected_clients.append(client)
 
     try:
         while True:
             data = await websocket.receive_text()
+            data_dict = json.loads(data)
 
-            # Poruku koju je jedan korisnik poslao ➝ šaljemo svima
-            for client in connected_clients:
-                await client.send_text(data)
+            if data_dict["message"] == "__joined__":
+                client["username"] = data_dict["username"]
+
+            for c in connected_clients:
+                await c["socket"].send_text(data)
 
     except WebSocketDisconnect:
-        connected_clients.remove(websocket)
+        connected_clients.remove(client)
+
+        if client["username"]:
+            leave_msg = json.dumps({
+                "username": client["username"],
+                "message": "__left__"
+            })
+            for c in connected_clients:
+                await c["socket"].send_text(leave_msg)
+
 
