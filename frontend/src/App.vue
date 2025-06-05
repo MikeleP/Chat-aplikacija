@@ -34,12 +34,25 @@ onMounted(() => {
   socket.value = new WebSocket("ws://localhost:8000/ws");
 
   socket.value.onopen = () => {
-    messages.value.push(`${username} se pridružio Chat-u`);
+    socket.value.send(
+      JSON.stringify({
+        username: username,
+        message: "__joined__",
+      })
+    );
   };
 
   socket.value.onmessage = (event) => {
     const data = JSON.parse(event.data);
-    messages.value.push(`${data.username}: ${data.message}`);
+    socket.value.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.message === "__joined__") {
+        messages.value.push(`${data.username} se pridružio Chat-u`);
+      } else {
+        messages.value.push(`${data.username}: ${data.message}`);
+      }
+    };
   };
 
   socket.value.onclose = () => {
