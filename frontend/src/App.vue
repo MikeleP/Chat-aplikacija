@@ -23,19 +23,39 @@ import { ref, onMounted } from "vue";
 const messages = ref(["Dobrodošao u Chat sobu"]);
 const newMessage = ref("");
 let username = "";
+const socket = ref(null);
 
-// Traži korisnika pri ulasku
+// Pita korisnika za ime
 onMounted(() => {
   while (!username) {
     username = prompt("Upiši svoje ime:");
   }
-  messages.value.push(`${username} se pridružio Chat-u`);
+
+  socket.value = new WebSocket("ws://localhost:8000/ws");
+
+  socket.value.onopen = () => {
+    messages.value.push(`${username} se pridružio Chat-u`);
+  };
+
+  socket.value.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    messages.value.push(`${data.username}: ${data.message}`);
+  };
+
+  socket.value.onclose = () => {
+    messages.value.push("🔌 Veza prekinuta");
+  };
 });
 
-// Funkcija za slanje poruke
 function sendMessage() {
-  if (!newMessage.value) return;
-  messages.value.push(`${username}: ${newMessage.value}`);
+  if (!newMessage.value || !socket.value) return;
+
+  const msg = {
+    username: username,
+    message: newMessage.value,
+  };
+
+  socket.value.send(JSON.stringify(msg));
   newMessage.value = "";
 }
 </script>

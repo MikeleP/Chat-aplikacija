@@ -1,24 +1,33 @@
-from typing import Union
-
 from fastapi import FastAPI
-
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import WebSocket, WebSocketDisconnect
+
 
 app = FastAPI()
 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[""],
-    allow_methods=[""],
+    allow_origins=["*"],  
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+connected_clients = []
 
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    connected_clients.append(websocket)
 
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
+    try:
+        while True:
+            data = await websocket.receive_text()
+
+            # Poruku koju je jedan korisnik poslao ➝ šaljemo svima
+            for client in connected_clients:
+                await client.send_text(data)
+
+    except WebSocketDisconnect:
+        connected_clients.remove(websocket)
+
