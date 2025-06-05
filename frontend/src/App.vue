@@ -1,19 +1,18 @@
 <template>
   <div class="chat-wrapper">
-    <!-- Gornji dio: prikaz poruka -->
     <div class="chat-log">
       <div v-for="(line, index) in messages" :key="index">
         {{ line }}
       </div>
     </div>
 
-    <!-- Donji dio: unos poruke -->
     <div class="chat-input">
       <input
         v-model="newMessage"
         @keyup.enter="sendMessage"
-        placeholder="Type here..."
+        placeholder="Upiši poruku..."
       />
+      <button @click="sendMessage">Pošalji</button>
     </div>
   </div>
 </template>
@@ -21,16 +20,16 @@
 <script setup>
 import { ref, onMounted } from "vue";
 
-const messages = ref(["Welcome to Chat Room"]);
+const messages = ref(["Dobrodošao u Chat sobu"]);
 const newMessage = ref("");
 let username = "";
 
 // Traži korisnika pri ulasku
 onMounted(() => {
   while (!username) {
-    username = prompt("Enter your username:");
+    username = prompt("Upiši svoje ime:");
   }
-  messages.value.push(`${username} joined`);
+  messages.value.push(`${username} se pridružio Chat-u`);
 });
 
 // Funkcija za slanje poruke
@@ -57,14 +56,33 @@ function sendMessage() {
 }
 
 .chat-input {
-  border-top: 2px solid black;
-  padding: 5px;
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  background: #fff;
 }
 
 .chat-input input {
-  width: 100%;
-  padding: 10px;
+  flex: 1;
+  padding: 10px 15px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  outline: none;
+}
+
+.chat-input button {
+  padding: 10px 20px;
   font-size: 1rem;
   border: none;
+  background-color: #000;
+  color: #fff;
+  border-radius: 999px; /* Zaobljeni rubovi */
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.chat-input button:hover {
+  background-color: #333;
 }
 </style>
