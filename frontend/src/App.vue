@@ -1,8 +1,12 @@
 <template>
   <div class="chat-wrapper">
     <div class="chat-log">
-      <div v-for="(line, index) in messages" :key="index">
-        {{ line }}
+      <div
+        v-for="(msg, index) in messages"
+        :key="index"
+        :class="msg.type === 'system' ? 'system-msg' : 'user-msg'"
+      >
+        {{ msg.text }}
       </div>
     </div>
 
@@ -20,7 +24,8 @@
 <script setup>
 import { ref, onMounted } from "vue";
 
-const messages = ref(["Dobrodošao u Chat sobu"]);
+const messages = ref([{ text: "Dobrodošao u Chat sobu", type: "system" }]);
+
 const newMessage = ref("");
 let username = "";
 const socket = ref(null);
@@ -45,16 +50,25 @@ onMounted(() => {
     const data = JSON.parse(event.data);
 
     if (data.message === "__joined__") {
-      messages.value.push(`${data.username} se pridružio Chat-u`);
+      messages.value.push({
+        text: `${data.username} se pridružio Chat-u`,
+        type: "system",
+      });
     } else if (data.message === "__left__") {
-      messages.value.push(`${data.username} je napustio Chat.`);
+      messages.value.push({
+        text: `${data.username} je napustio Chat.`,
+        type: "system",
+      });
     } else {
-      messages.value.push(`${data.username}: ${data.message}`);
+      messages.value.push({
+        text: `${data.username}: ${data.message}`,
+        type: "user",
+      });
     }
   };
 
   socket.value.onclose = () => {
-    messages.value.push("🔌 Veza prekinuta");
+    messages.value.push({ text: "🔌 Veza prekinuta", type: "system" });
   };
 });
 
@@ -115,5 +129,17 @@ function sendMessage() {
 
 .chat-input button:hover {
   background-color: #333;
+}
+
+.system-msg {
+  text-align: center;
+  color: #555;
+  font-style: italic;
+  margin: 5px 0;
+}
+
+.user-msg {
+  text-align: left;
+  margin: 2px 0;
 }
 </style>
