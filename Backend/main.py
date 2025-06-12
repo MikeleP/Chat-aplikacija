@@ -1,27 +1,39 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-
 from fastapi.middleware.cors import CORSMiddleware
-
+from broadcaster import Broadcast
+import asyncio
 import json
-
 
 app = FastAPI()
 
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-connected_clients = []
+broadcast = Broadcast("redis://localhost:6379")
+
+@app.on_event("startup")
+async def startup():
+    await broadcast.connect()
+
+@app.on_event("shutdown")
+async def shutdown():
+    await broadcast.disconnect()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    client = {"socket": websocket, "username": None}
-    connected_clients.append(client)
+    username = None  
+
+    async def event_listener():
+        async with broadcast.subscribe(channel="chat") as subscriber:
+            async for event in subscriber:
+                await websocket.send_text(event.message)
+
+    listener_task = asyncio.create_task(event_listener())
 
     try:
         while True:
@@ -29,24 +41,15 @@ async def websocket_endpoint(websocket: WebSocket):
             data_dict = json.loads(data)
 
             if data_dict["message"] == "__joined__":
-                client["username"] = data_dict["username"]
+                username = data_dict["username"]
 
-            for c in connected_clients:
-                await c["socket"].send_text(data)
-
+            await broadcast.publish(channel="chat", message=data)
     except WebSocketDisconnect:
-        connected_clients.remove(client)
+        listener_task.cancel()
 
-        if client["username"]:
+        if username:
             leave_msg = json.dumps({
-                "username": client["username"],
+                "username": username,
                 "message": "__left__"
             })
-            for c in connected_clients:
-                try:
-                    await c["socket"].send_text(leave_msg)
-                except:
-                    pass
-
-
-
+            await broadcast.publish(channel="chat", message=leave_msg)
