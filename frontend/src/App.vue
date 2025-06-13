@@ -1,39 +1,51 @@
 <template>
-  <div class="chat-wrapper">
-    <div class="chat-log">
-      <div
-        v-for="(msg, index) in messages"
-        :key="index"
-        :class="msg.type === 'system' ? 'system-msg' : 'chat-bubble'"
-      >
-        {{ msg.text }}
+  <div>
+    <div v-if="showModal" class="modal-overlay">
+      <div class="modal">
+        <h2>Upiši svoje ime:</h2>
+        <input v-model="usernameInput" @keyup.enter="confirmUsername" />
+        <button @click="confirmUsername">Uđi u chat</button>
       </div>
     </div>
 
-    <div class="chat-input">
-      <input
-        v-model="newMessage"
-        @keyup.enter="sendMessage"
-        placeholder="Upiši poruku..."
-      />
-      <button @click="sendMessage">Pošalji</button>
+    <div class="chat-wrapper" v-else>
+      <div class="chat-log">
+        <div
+          v-for="(msg, index) in messages"
+          :key="index"
+          :class="msg.type === 'system' ? 'system-msg' : 'chat-bubble'"
+        >
+          {{ msg.text }}
+        </div>
+      </div>
+
+      <div class="chat-input">
+        <input
+          v-model="newMessage"
+          @keyup.enter="sendMessage"
+          placeholder="Upiši poruku..."
+        />
+        <button @click="sendMessage">Pošalji</button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref } from "vue";
 
+const showModal = ref(true);
+const usernameInput = ref("");
 const messages = ref([{ text: "Dobrodošao u Chat sobu", type: "system" }]);
-
 const newMessage = ref("");
 let username = "";
 const socket = ref(null);
 
-onMounted(() => {
-  while (!username) {
-    username = prompt("Upiši svoje ime:");
-  }
+function confirmUsername() {
+  if (!usernameInput.value.trim()) return;
+
+  username = usernameInput.value.trim();
+  showModal.value = false;
 
   socket.value = new WebSocket("ws://localhost:8000/ws");
 
@@ -68,9 +80,9 @@ onMounted(() => {
   };
 
   socket.value.onclose = () => {
-    messages.value.push({ text: "🔌 Veza prekinuta", type: "system" });
+    messages.value.push({ text: "Veza prekinuta", type: "system" });
   };
-});
+}
 
 function sendMessage() {
   if (!newMessage.value || !socket.value) return;
@@ -120,9 +132,9 @@ function sendMessage() {
   padding: 10px 20px;
   font-size: 1rem;
   border: none;
-  background-color: #000;
+  background-color: darkblue;
   color: #fff;
-  border-radius: 999px; /* Zaobljeni rubovi */
+  border-radius: 999px;
   cursor: pointer;
   transition: background-color 0.2s;
 }
@@ -138,18 +150,55 @@ function sendMessage() {
   margin: 5px 0;
 }
 
-.user-msg {
-  text-align: left;
-  margin: 2px 0;
-}
-
 .chat-bubble {
-  background-color: white;
+  background-color: lightblue;
   border-radius: 999px;
   padding: 12px 20px;
   margin: 6px 0;
   font-size: 1.1rem;
   max-width: fit-content;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.modal {
+  background: white;
+  padding: 30px 40px;
+  border-radius: 16px;
+  text-align: center;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.modal input {
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.modal button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background: darkblue;
+  color: white;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 1rem;
 }
 </style>
