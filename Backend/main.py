@@ -1,55 +1,45 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from broadcaster import Broadcast
-import asyncio
+from redis_pubsub import RedisPubSubManager
 import json
+import asyncio
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-broadcast = Broadcast("redis://localhost:6379")
+manager = RedisPubSubManager()
+connected_clients = []
 
 @app.on_event("startup")
-async def startup():
-    await broadcast.connect()
-
-@app.on_event("shutdown")
-async def shutdown():
-    await broadcast.disconnect()
+async def startup_event():
+    await manager.subscribe()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    username = None  
+    connected_clients.append(websocket)
 
-    async def event_listener():
-        async with broadcast.subscribe(channel="chat") as subscriber:
-            async for event in subscriber:
-                await websocket.send_text(event.message)
-
-    listener_task = asyncio.create_task(event_listener())
+    redis_listener_task = asyncio.create_task(redis_listener(websocket))
 
     try:
         while True:
             data = await websocket.receive_text()
-            data_dict = json.loads(data)
+            await manager.publish(data)
 
-            if data_dict["message"] == "__joined__":
-                username = data_dict["username"]
-
-            await broadcast.publish(channel="chat", message=data)
     except WebSocketDisconnect:
-        listener_task.cancel()
+        connected_clients.remove(websocket)
+        redis_listener_task.cancel()
 
-        if username:
-            leave_msg = json.dumps({
-                "username": username,
-                "message": "__left__"
-            })
-            await broadcast.publish(channel="chat", message=leave_msg)
+async def redis_listener(websocket: WebSocket):
+    async for message in manager.listen():
+        for client in connected_clients:
+            try:
+                await client.send_text(message)
+            except:
+                pass
